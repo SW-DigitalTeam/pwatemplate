@@ -1,0 +1,15 @@
+{
+  "name": "sw-pwa-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "typecheck": "npm run typecheck -w apps/web && npm run typecheck -w packages/programme-config",
+    "lint": "npm run lint -w apps/web",
+    "test": "npm run test -w packages/programme-config",
+    "test:db": "bash scripts/test-db.sh",
+    "setup:local": "bash scripts/setup-local.sh"
+  }
+}
