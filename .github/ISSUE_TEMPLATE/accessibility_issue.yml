@@ -1,0 +1,14 @@
+name: Accessibility issue
+description: A barrier for keyboard, screen reader, low vision, motor or cognitive access
+labels: [accessibility, triage]
+body:
+  - type: textarea
+    id: barrier
+    attributes: { label: "What's the barrier and where?" }
+    validations: { required: true }
+  - type: input
+    id: at
+    attributes: { label: Assistive tech / settings, placeholder: e.g. NVDA + Firefox, 200% zoom, reduced motion }
+  - type: input
+    id: wcag
+    attributes: { label: WCAG 2.2 criterion if known, placeholder: e.g. 2.4.7 Focus Visible }

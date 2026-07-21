@@ -1,0 +1,14 @@
+name: Security concern
+description: Possible vulnerability or exposure (do NOT include exploit detail here — see SECURITY.md for private disclosure)
+labels: [security, triage]
+body:
+  - type: markdown
+    attributes: { value: "If this exposes participant data or is exploitable, use the private disclosure route in SECURITY.md instead of a public issue." }
+  - type: textarea
+    id: summary
+    attributes: { label: Summary (no exploit steps in public issues) }
+    validations: { required: true }
+  - type: dropdown
+    id: data
+    attributes: { label: Participant data at risk?, options: ["no", "possibly", "yes"] }
+    validations: { required: true }

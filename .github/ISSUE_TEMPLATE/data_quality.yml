@@ -1,0 +1,14 @@
+name: Data-quality issue
+description: Numbers look wrong, duplicates, mismatched reporting
+labels: [data-quality, triage]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What looks wrong, and in which report/screen? }
+    validations: { required: true }
+  - type: input
+    id: scope
+    attributes: { label: Programme / school / date range affected }
+  - type: textarea
+    id: expectation
+    attributes: { label: What did you expect the numbers to be, and why? }

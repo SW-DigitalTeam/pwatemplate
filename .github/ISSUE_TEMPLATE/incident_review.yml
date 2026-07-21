@@ -1,0 +1,21 @@
+name: Incident review
+description: Post-incident record (blameless)
+labels: [incident]
+body:
+  - type: input
+    id: when
+    attributes: { label: Date/time and duration }
+    validations: { required: true }
+  - type: textarea
+    id: impact
+    attributes: { label: Impact (who/what was affected; was participant data involved?) }
+    validations: { required: true }
+  - type: textarea
+    id: timeline
+    attributes: { label: Timeline }
+  - type: textarea
+    id: causes
+    attributes: { label: Contributing causes }
+  - type: textarea
+    id: actions
+    attributes: { label: Follow-up actions (link issues) }

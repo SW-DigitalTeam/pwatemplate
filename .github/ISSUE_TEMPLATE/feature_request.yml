@@ -1,0 +1,14 @@
+name: Feature request
+description: Propose an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: The participant/staff problem this solves }
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: Proposed change }
+  - type: dropdown
+    id: scope
+    attributes: { label: Scope, options: [platform (all programmes), one programme's configuration] }

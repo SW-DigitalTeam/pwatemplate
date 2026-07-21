@@ -1,0 +1,11 @@
+name: Technical debt
+description: Something we should improve before it bites
+labels: [tech-debt]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What and where }
+    validations: { required: true }
+  - type: textarea
+    id: risk
+    attributes: { label: What happens if we leave it }
