@@ -147,7 +147,7 @@ export default function AssignSurveyPage() {
   return (
     <div className="mx-auto max-w-2xl py-8">
       <a
-        href="/admin/surveys"
+        href="/dashboard/admin/surveys"
         className="text-sm text-primary underline hover:opacity-80"
       >
         &larr; Back to surveys

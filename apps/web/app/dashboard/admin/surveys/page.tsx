@@ -44,7 +44,7 @@ export default async function AdminSurveysPage() {
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Surveys</h1>
         <a
-          href="/admin/surveys/new"
+          href="/dashboard/admin/surveys/new"
           className="rounded-theme bg-primary px-5 py-3 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
           Create survey

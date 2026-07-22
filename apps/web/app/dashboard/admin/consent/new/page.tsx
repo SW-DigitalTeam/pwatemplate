@@ -108,7 +108,7 @@ function ConsentForm() {
           {editId ? "New version created" : "Permission form created"}
         </h1>
         <button
-          onClick={() => router.push("/admin/consent")}
+          onClick={() => router.push("/dashboard/admin/consent")}
           className="mt-6 rounded-theme bg-primary px-5 py-3 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
           Back to permission forms
@@ -120,7 +120,7 @@ function ConsentForm() {
   return (
     <div className="mx-auto max-w-3xl py-8">
       <a
-        href="/admin/consent"
+        href="/dashboard/admin/consent"
         className="text-sm text-primary underline hover:opacity-80"
       >
         &larr; Back to permission forms

@@ -47,7 +47,7 @@ export default async function AdminConsentPage() {
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Permission forms</h1>
         <a
-          href="/admin/consent/new"
+          href="/dashboard/admin/consent/new"
           className="rounded-theme bg-primary px-5 py-3 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
           Create form

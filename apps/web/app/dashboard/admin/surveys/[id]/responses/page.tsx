@@ -48,7 +48,7 @@ export default async function SurveyResponsesPage({
   return (
     <div>
       <a
-        href="/admin/surveys"
+        href="/dashboard/admin/surveys"
         className="text-sm text-primary underline hover:opacity-80"
       >
         &larr; Back to surveys

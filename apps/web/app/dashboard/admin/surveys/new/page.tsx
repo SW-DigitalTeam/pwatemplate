@@ -243,7 +243,7 @@ function SurveyBuilder() {
             : `"${title}" has been created.`}
         </p>
         <button
-          onClick={() => router.push("/admin/surveys")}
+          onClick={() => router.push("/dashboard/admin/surveys")}
           className="mt-6 rounded-theme bg-primary px-5 py-3 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
           Back to surveys
@@ -255,7 +255,7 @@ function SurveyBuilder() {
   return (
     <div className="mx-auto max-w-4xl py-8">
       <a
-        href="/admin/surveys"
+        href="/dashboard/admin/surveys"
         className="text-sm text-primary underline hover:opacity-80"
       >
         &larr; Back to surveys

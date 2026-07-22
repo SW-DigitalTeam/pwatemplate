@@ -36,35 +36,35 @@ export default async function DashboardPage() {
         <h2 className="font-display text-xl font-semibold">Quick actions</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            href="/schools"
+            href="/dashboard/schools"
             className="rounded-theme border border-current/15 p-4 hover:bg-primary hover:text-primary-contrast"
           >
             <h3 className="font-medium">Schools</h3>
             <p className="text-sm opacity-70">View and manage schools</p>
           </Link>
           <Link
-            href="/sessions"
+            href="/dashboard/sessions"
             className="rounded-theme border border-current/15 p-4 hover:bg-primary hover:text-primary-contrast"
           >
             <h3 className="font-medium">Sessions</h3>
             <p className="text-sm opacity-70">Schedule and record sessions</p>
           </Link>
           <Link
-            href="/surveys"
+            href="/dashboard/surveys"
             className="rounded-theme border border-current/15 p-4 hover:bg-primary hover:text-primary-contrast"
           >
             <h3 className="font-medium">Surveys</h3>
             <p className="text-sm opacity-70">View and manage surveys</p>
           </Link>
           <Link
-            href="/reports"
+            href="/dashboard/reports"
             className="rounded-theme border border-current/15 p-4 hover:bg-primary hover:text-primary-contrast"
           >
             <h3 className="font-medium">Reports</h3>
             <p className="text-sm opacity-70">Participation and movement</p>
           </Link>
           <Link
-            href="/issues"
+            href="/dashboard/issues"
             className="rounded-theme border border-current/15 p-4 hover:bg-primary hover:text-primary-contrast"
           >
             <h3 className="font-medium">Issues</h3>

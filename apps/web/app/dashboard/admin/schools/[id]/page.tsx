@@ -41,7 +41,7 @@ export default async function AdminSchoolPage({
   return (
     <div>
       <a
-        href="/admin/schools"
+        href="/dashboard/admin/schools"
         className="text-sm text-primary underline hover:opacity-80"
       >
         &larr; Back to schools

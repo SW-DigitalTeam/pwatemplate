@@ -185,7 +185,7 @@ export default function SessionAttendancePage() {
               <button
                 onClick={async () => {
                   await syncNow();
-                  router.push("/sessions");
+                  router.push("/dashboard/sessions");
                 }}
                 className="mt-2 rounded bg-amber-200 px-4 py-2 text-sm font-medium hover:bg-amber-300"
               >

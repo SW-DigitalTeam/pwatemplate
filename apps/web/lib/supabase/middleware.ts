@@ -22,19 +22,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // refresh the session — important: do NOT use getUser(), which would
-  // make every request hit the Supabase Auth server
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes: /dashboard, /admin, /schools, /programmes/manage
   const path = request.nextUrl.pathname;
-  const isProtected =
-    path.startsWith("/dashboard") ||
-    path.startsWith("/admin") ||
-    path.startsWith("/schools") ||
-    path.startsWith("/programmes/manage");
+
+  // All protected routes live under /dashboard/
+  const isProtected = path.startsWith("/dashboard");
 
   const isAuthPage =
     path.startsWith("/auth/login") ||
@@ -42,7 +37,6 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/auth/callback") ||
     path.startsWith("/auth/access-code");
 
-  // Redirect to login if accessing protected route without auth
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
@@ -50,7 +44,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect to dashboard if authenticated user visits auth pages
   if (isAuthPage && user && !path.startsWith("/auth/callback")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
