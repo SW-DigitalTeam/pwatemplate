@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useOfflineStatus } from "@/lib/offline/useOffline";
+import { enqueue } from "@/lib/offline/outbox";
 
 type Participant = {
   id: string;
@@ -10,31 +12,24 @@ type Participant = {
   status: string;
 };
 
-type AttendanceRecord = {
-  participant_id: string;
-  status: "present" | "absent" | "late" | "left_early";
-  session_id: string;
-};
-
 export default function SessionAttendancePage() {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
   const supabase = createClient();
+  const { online, queueSize, syncNow } = useOfflineStatus();
 
-  const [session, setSession] = useState<
-    Record<string, unknown> | null
-  >(null);
+  const [session, setSession] = useState<Record<string, unknown> | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [attendance, setAttendance] = useState<
     Record<string, "present" | "absent" | "late" | "left_early">
   >({});
-  const [existingAttendance, setExistingAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [offlineQueued, setOfflineQueued] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -57,7 +52,6 @@ export default function SessionAttendancePage() {
         cohort_id: string | null;
       };
 
-      // Load existing attendance
       const { data: existing } = await supabase
         .from("attendance")
         .select("participant_id, status")
@@ -65,21 +59,20 @@ export default function SessionAttendancePage() {
         .is("superseded_by", null);
 
       if (existing) {
-        setExistingAttendance(
-          existing.map((a) => ({
-            ...a,
-            session_id: sessionId,
-          }))
-        );
-
-        const map: Record<string, "present" | "absent" | "late" | "left_early"> = {};
+        const map: Record<
+          string,
+          "present" | "absent" | "late" | "left_early"
+        > = {};
         for (const a of existing) {
-          map[a.participant_id] = a.status as "present" | "absent" | "late" | "left_early";
+          map[a.participant_id] = a.status as
+            | "present"
+            | "absent"
+            | "late"
+            | "left_early";
         }
         setAttendance(map);
       }
 
-      // Load participants from the school
       const { data: parts } = await supabase
         .from("participants")
         .select("id, display_name, status")
@@ -125,24 +118,30 @@ export default function SessionAttendancePage() {
       return;
     }
 
-    // Upsert: delete old (supersede pattern), insert new
-    const { error: delErr } = await supabase
-      .from("attendance")
-      .update({ superseded_by: null }) // RLS prevents direct delete; we use supersede
-      .eq("session_id", sessionId);
+    // OFFLINE MODE: queue in IndexedDB instead of direct API call
+    if (!online) {
+      try {
+        for (const record of records) {
+          await enqueue("attendance", "INSERT", record as Record<string, unknown>);
+        }
+        setOfflineQueued(true);
+        setSuccess(true);
+      } catch (err) {
+        setError("Could not save offline. Please try again.");
+      }
+      setSaving(false);
+      return;
+    }
 
-    // Actually, let's just insert new rows — the supersede pattern handles corrections
-    const { error: insErr } = await supabase
-      .from("attendance")
-      .upsert(records, {
-        onConflict: "session_id, participant_id, superseded_by",
-        ignoreDuplicates: false,
-      });
+    // ONLINE MODE: direct API call
+    const { error: insErr } = await supabase.from("attendance").upsert(records, {
+      onConflict: "session_id, participant_id, superseded_by",
+      ignoreDuplicates: false,
+    });
 
     if (insErr) {
       setError(insErr.message);
     } else {
-      // Update session status
       await supabase
         .from("sessions")
         .update({
@@ -168,19 +167,39 @@ export default function SessionAttendancePage() {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <h1 className="font-display text-2xl font-bold text-primary">
-          Attendance saved
+          {offlineQueued ? "Attendance queued" : "Attendance saved"}
         </h1>
         <p className="mt-4">
-          {(session as Record<string, unknown>)?.title as string ??
-            "Session"}{" "}
-          attendance has been recorded.
+          {offlineQueued
+            ? "Attendance has been saved to this device and will sync when you're back online."
+            : "Attendance has been recorded."}
         </p>
+        {offlineQueued && (
+          <div className="mt-4 rounded bg-amber-50 p-4 text-sm text-amber-800">
+            <p className="font-medium">Sync status</p>
+            <p className="mt-1">
+              {queueSize} item{queueSize !== 1 ? "s" : ""} waiting to sync.
+              {online ? " Syncing now." : " Will sync when connection returns."}
+            </p>
+            {online && (
+              <button
+                onClick={async () => {
+                  await syncNow();
+                  router.push("/sessions");
+                }}
+                className="mt-2 rounded bg-amber-200 px-4 py-2 text-sm font-medium hover:bg-amber-300"
+              >
+                Force sync
+              </button>
+            )}
+          </div>
+        )}
         <button
           type="button"
-          onClick={() => router.push("/sessions")}
+          onClick={() => router.push("/dashboard")}
           className="mt-6 rounded-theme bg-primary px-5 py-3 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
-          View sessions
+          Return to dashboard
         </button>
       </div>
     );
@@ -195,21 +214,41 @@ export default function SessionAttendancePage() {
         &larr; Dashboard
       </a>
 
-      <h1 className="mt-4 font-display text-2xl font-bold text-primary">
-        Take attendance
-      </h1>
-      <p className="text-sm opacity-70">
-        {(session as Record<string, unknown>)?.title as string ??
-          "Session"}{" "}
-        &middot;{" "}
-        {new Date(
-          (session as Record<string, unknown>)?.scheduled_at as string
-        ).toLocaleDateString("en-NZ", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        })}
-      </p>
+      <div className="mt-4 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-primary">
+            Take attendance
+          </h1>
+          <p className="text-sm opacity-70">
+            {(session as Record<string, unknown>)?.title as string ?? "Session"}{" "}
+            &middot;{" "}
+            {new Date(
+              (session as Record<string, unknown>)?.scheduled_at as string
+            ).toLocaleDateString("en-NZ", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </p>
+        </div>
+        {/* Offline indicator */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${
+              online ? "bg-green-500" : "bg-amber-500"
+            }`}
+            aria-hidden="true"
+          />
+          <span className="text-xs font-medium opacity-70">
+            {online ? "Online" : "Offline"}
+          </span>
+          {queueSize > 0 && (
+            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
+              {queueSize} queued
+            </span>
+          )}
+        </div>
+      </div>
 
       {error && (
         <div
@@ -288,7 +327,9 @@ export default function SessionAttendancePage() {
         >
           {saving
             ? "Saving..."
-            : `Save attendance (${Object.keys(attendance).length} recorded)`}
+            : online
+              ? `Save attendance (${Object.keys(attendance).length} recorded)`
+              : `Save offline (${Object.keys(attendance).length} recorded)`}
         </button>
       )}
     </div>
