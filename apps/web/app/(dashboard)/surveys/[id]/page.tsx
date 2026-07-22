@@ -31,10 +31,12 @@ export default function SurveyResponsePage() {
 
   const [survey, setSurvey] = useState<Record<string, unknown> | null>(null);
   const [responses, setResponses] = useState<Record<string, string | string[]>>({});
+  const [responseId, setResponseId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +54,23 @@ export default function SurveyResponsePage() {
       }
 
       setSurvey(data);
+
+      // Check for existing in_progress response (save-and-resume)
+      const { data: existing } = await supabase
+        .from("survey_responses")
+        .select("id, answers, status")
+        .eq("survey_id", surveyId)
+        .eq("status", "in_progress")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existing) {
+        setResponseId(existing.id);
+        setResponses((existing.answers as Record<string, string | string[]>) ?? {});
+        setLastSaved(new Date());
+      }
+
       setLoading(false);
     }
     load();
@@ -86,9 +105,7 @@ export default function SurveyResponsePage() {
         <h1 className="font-display text-2xl font-bold text-primary">
           Thank you
         </h1>
-        <p className="mt-4">
-          Your responses have been recorded.
-        </p>
+        <p className="mt-4">Your responses have been recorded.</p>
         <button
           type="button"
           onClick={() => router.push("/dashboard")}
@@ -117,41 +134,78 @@ export default function SurveyResponsePage() {
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave(resume: boolean) {
     setSaving(true);
     setError(null);
 
-    // Validate required
-    for (const section of sections) {
-      for (const q of section.questions) {
-        if (q.required && !responses[q.id]) {
-          setError(`Please answer: "${q.label}"`);
-          setSaving(false);
-          return;
+    if (resume) {
+      // Save progress only — no validation
+      const payload = {
+        survey_id: surveyId,
+        answers: responses,
+        status: "in_progress",
+      };
+
+      if (responseId) {
+        const { error: updateError } = await supabase
+          .from("survey_responses")
+          .update({ answers: responses })
+          .eq("id", responseId)
+          .eq("status", "in_progress");
+
+        if (updateError) {
+          setError(updateError.message);
+        } else {
+          setLastSaved(new Date());
         }
-        if (q.required && Array.isArray(responses[q.id]) && (responses[q.id] as string[]).length === 0) {
-          setError(`Please select at least one option for: "${q.label}"`);
-          setSaving(false);
-          return;
+      } else {
+        const { data, error: insertError } = await supabase
+          .from("survey_responses")
+          .insert(payload)
+          .select("id")
+          .single();
+
+        if (insertError) {
+          setError(insertError.message);
+        } else if (data) {
+          setResponseId(data.id);
+          setLastSaved(new Date());
         }
+      }
+    } else {
+      // Submit — validate required
+      for (const section of sections) {
+        for (const q of section.questions) {
+          if (q.required && !responses[q.id]) {
+            setError(`Please answer: "${q.label}"`);
+            setSaving(false);
+            return;
+          }
+          if (q.required && Array.isArray(responses[q.id]) && (responses[q.id] as string[]).length === 0) {
+            setError(`Please select at least one option for: "${q.label}"`);
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
+      const { error: submitError } = await supabase
+        .from("survey_responses")
+        .upsert({
+          id: responseId,
+          survey_id: surveyId,
+          answers: responses,
+          status: "submitted",
+          submitted_at: new Date().toISOString(),
+        });
+
+      if (submitError) {
+        setError(submitError.message);
+      } else {
+        setSubmitted(true);
       }
     }
 
-    const { error: insertError } = await supabase
-      .from("survey_responses")
-      .insert({
-        survey_id: surveyId,
-        answers: responses,
-        status: "submitted",
-        submitted_at: new Date().toISOString(),
-      });
-
-    if (insertError) {
-      setError(insertError.message);
-    } else {
-      setSubmitted(true);
-    }
     setSaving(false);
   }
 
@@ -164,11 +218,29 @@ export default function SurveyResponsePage() {
         &larr; Dashboard
       </a>
 
-      <h1 className="mt-4 font-display text-2xl font-bold text-primary">
-        {(survey as Record<string, unknown>)?.title as string}
-      </h1>
+      <div className="mt-4 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-primary">
+            {(survey as Record<string, unknown>)?.title as string}
+          </h1>
+        </div>
+        {lastSaved && (
+          <span className="rounded bg-green-50 px-3 py-1 text-xs text-green-700">
+            Saved {lastSaved.toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-10">
+      {error && (
+        <div
+          role="alert"
+          className="mt-4 rounded-theme border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {error}
+        </div>
+      )}
+
+      <form className="mt-8 space-y-10">
         {sections.map((section) => (
           <fieldset key={section.id} className="space-y-6">
             <legend className="font-display text-lg font-semibold">
@@ -194,9 +266,7 @@ export default function SurveyResponsePage() {
                         <button
                           key={n}
                           type="button"
-                          onClick={() =>
-                            updateResponse(q.id, String(n))
-                          }
+                          onClick={() => updateResponse(q.id, String(n))}
                           className={`h-11 w-11 rounded border text-sm font-medium transition-colors ${
                             responses[q.id] === String(n)
                               ? "bg-primary text-primary-contrast border-primary"
@@ -218,9 +288,7 @@ export default function SurveyResponsePage() {
                         <button
                           key={label}
                           type="button"
-                          onClick={() =>
-                            updateResponse(q.id, String(i + 1))
-                          }
+                          onClick={() => updateResponse(q.id, String(i + 1))}
                           className={`rounded border px-3 py-2 text-xs font-medium transition-colors ${
                             responses[q.id] === String(i + 1)
                               ? "bg-primary text-primary-contrast border-primary"
@@ -251,9 +319,7 @@ export default function SurveyResponsePage() {
                           name={`q-${q.id}`}
                           value={opt}
                           checked={responses[q.id] === opt}
-                          onChange={() =>
-                            updateResponse(q.id, opt)
-                          }
+                          onChange={() => updateResponse(q.id, opt)}
                           className="h-4 w-4"
                         />
                         {opt}
@@ -279,9 +345,7 @@ export default function SurveyResponsePage() {
                             type="checkbox"
                             value={opt}
                             checked={selected.includes(opt)}
-                            onChange={() =>
-                              toggleMultiOption(q.id, opt)
-                            }
+                            onChange={() => toggleMultiOption(q.id, opt)}
                             className="h-4 w-4 rounded"
                           />
                           {opt}
@@ -316,9 +380,7 @@ export default function SurveyResponsePage() {
                     id={`q-${q.id}`}
                     type="number"
                     value={(responses[q.id] as string) ?? ""}
-                    onChange={(e) =>
-                      updateResponse(q.id, e.target.value)
-                    }
+                    onChange={(e) => updateResponse(q.id, e.target.value)}
                     className="block w-full rounded-theme border border-current/20 bg-white px-4 py-3 font-body"
                   />
                 )}
@@ -328,9 +390,7 @@ export default function SurveyResponsePage() {
                     id={`q-${q.id}`}
                     type="date"
                     value={(responses[q.id] as string) ?? ""}
-                    onChange={(e) =>
-                      updateResponse(q.id, e.target.value)
-                    }
+                    onChange={(e) => updateResponse(q.id, e.target.value)}
                     className="block w-full rounded-theme border border-current/20 bg-white px-4 py-3 font-body"
                   />
                 )}
@@ -340,9 +400,7 @@ export default function SurveyResponsePage() {
                     id={`q-${q.id}`}
                     type="text"
                     value={(responses[q.id] as string) ?? ""}
-                    onChange={(e) =>
-                      updateResponse(q.id, e.target.value)
-                    }
+                    onChange={(e) => updateResponse(q.id, e.target.value)}
                     className="block w-full rounded-theme border border-current/20 bg-white px-4 py-3 font-body"
                   />
                 )}
@@ -352,9 +410,7 @@ export default function SurveyResponsePage() {
                     id={`q-${q.id}`}
                     rows={4}
                     value={(responses[q.id] as string) ?? ""}
-                    onChange={(e) =>
-                      updateResponse(q.id, e.target.value)
-                    }
+                    onChange={(e) => updateResponse(q.id, e.target.value)}
                     className="block w-full rounded-theme border border-current/20 bg-white px-4 py-3 font-body text-sm"
                   />
                 )}
@@ -364,21 +420,29 @@ export default function SurveyResponsePage() {
         ))}
 
         {error && (
-          <div
-            role="alert"
-            className="rounded-theme border border-red-300 bg-red-50 p-4 text-sm text-red-800"
-          >
+          <div role="alert" className="rounded-theme border border-red-300 bg-red-50 p-4 text-sm text-red-800">
             {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full rounded-theme bg-primary px-5 py-4 font-medium text-primary-contrast hover:opacity-90 focus-visible:ring-2 disabled:opacity-50"
-        >
-          {saving ? "Submitting..." : "Submit survey"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => handleSave(true)}
+            disabled={saving}
+            className="flex-1 rounded-theme border border-current/20 px-5 py-4 text-center font-medium hover:bg-primary/10 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save progress"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSave(false)}
+            disabled={saving}
+            className="flex-1 rounded-theme bg-primary px-5 py-4 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? "Submitting..." : "Submit survey"}
+          </button>
+        </div>
       </form>
     </div>
   );
