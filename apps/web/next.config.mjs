@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@sw/programme-config"],
@@ -13,4 +15,16 @@ const nextConfig = {
     },
   ],
 };
-export default nextConfig;
+
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

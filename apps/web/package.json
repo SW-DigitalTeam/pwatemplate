@@ -13,6 +13,7 @@
     "test:a11y": "playwright test --grep \"accessibility\""
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.67.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.47.0",
     "@sw/programme-config": "*",
