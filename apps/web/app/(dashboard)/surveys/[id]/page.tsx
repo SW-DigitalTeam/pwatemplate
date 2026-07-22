@@ -11,6 +11,11 @@ type Question = {
   required?: boolean;
   scale?: number;
   options?: string[];
+  condition?: {
+    dependsOn: string;
+    operator: "equals" | "not_equals";
+    value: string;
+  };
 };
 
 type Section = {
@@ -134,6 +139,16 @@ export default function SurveyResponsePage() {
     });
   }
 
+  function isVisible(q: Question): boolean {
+    if (!q.condition) return true;
+    const dependsOn = responses[q.condition.dependsOn];
+    if (dependsOn === undefined || dependsOn === null || dependsOn === "") return false;
+    const val = Array.isArray(dependsOn) ? dependsOn.join(",") : String(dependsOn);
+    if (q.condition.operator === "equals") return val === q.condition.value;
+    if (q.condition.operator === "not_equals") return val !== q.condition.value;
+    return true;
+  }
+
   async function handleSave(resume: boolean) {
     setSaving(true);
     setError(null);
@@ -247,7 +262,9 @@ export default function SurveyResponsePage() {
               {section.title}
             </legend>
 
-            {section.questions.map((q) => (
+            {section.questions.map((q) => {
+              if (!isVisible(q)) return null;
+              return (
               <div key={q.id} className="space-y-2">
                 <label
                   htmlFor={`q-${q.id}`}
@@ -415,7 +432,8 @@ export default function SurveyResponsePage() {
                   />
                 )}
               </div>
-            ))}
+            );
+            })}
           </fieldset>
         ))}
 

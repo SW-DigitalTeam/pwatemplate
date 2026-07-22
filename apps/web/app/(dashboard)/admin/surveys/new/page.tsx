@@ -23,6 +23,11 @@ type Question = {
   required: boolean;
   scale?: number;
   options?: string[];
+  condition?: {
+    dependsOn: string;
+    operator: "equals" | "not_equals";
+    value: string;
+  };
 };
 
 type Section = {
@@ -465,6 +470,79 @@ function SurveyBuilder() {
                   />
                   <span className="text-sm">Required</span>
                 </label>
+
+                {/* Conditional question logic */}
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-medium text-primary">
+                    {q.condition ? "Conditional display (configured)" : "Conditional display (optional)"}
+                  </summary>
+                  <div className="mt-2 grid gap-2 rounded border border-current/10 bg-white p-3 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium">Depends on question</label>
+                      <select
+                        value={q.condition?.dependsOn ?? ""}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            updateQuestion(sIdx, qIdx, {
+                              condition: {
+                                dependsOn: e.target.value,
+                                operator: q.condition?.operator ?? "equals",
+                                value: q.condition?.value ?? "",
+                              },
+                            });
+                          } else {
+                            updateQuestion(sIdx, qIdx, { condition: undefined });
+                          }
+                        }}
+                        className="mt-1 block w-full rounded border border-current/20 bg-white px-2 py-1.5 text-xs"
+                      >
+                        <option value="">Show always</option>
+                        {sections.flatMap((s) =>
+                          s.questions
+                            .filter((sq) => sq.id !== q.id)
+                            .map((sq) => (
+                              <option key={sq.id} value={sq.id}>
+                                {sq.label || `Question ${sq.id}`}
+                              </option>
+                            ))
+                        )}
+                      </select>
+                    </div>
+                    {q.condition && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium">Operator</label>
+                          <select
+                            value={q.condition.operator}
+                            onChange={(e) =>
+                              updateQuestion(sIdx, qIdx, {
+                                condition: { ...q.condition!, operator: e.target.value as "equals" | "not_equals" },
+                              })
+                            }
+                            className="mt-1 block w-full rounded border border-current/20 bg-white px-2 py-1.5 text-xs"
+                          >
+                            <option value="equals">Equals</option>
+                            <option value="not_equals">Does not equal</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium">Value</label>
+                          <input
+                            type="text"
+                            value={q.condition.value}
+                            onChange={(e) =>
+                              updateQuestion(sIdx, qIdx, {
+                                condition: { ...q.condition!, value: e.target.value },
+                              })
+                            }
+                            placeholder="e.g. Yes"
+                            className="mt-1 block w-full rounded border border-current/20 bg-white px-2 py-1.5 text-xs"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </details>
               </div>
             ))}
 
