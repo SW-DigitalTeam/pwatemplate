@@ -17,7 +17,7 @@ export const karawhiua: ProgrammeConfigInput = {
   },
   theme: {
     colors: {
-      primary: "#d103d1", primaryContrast: "#ffffff",
+      primary: "#7c3aed", primaryContrast: "#ffffff",
       surface: "#0f0a14", surfaceText: "#f5eefa", accent: "#3ce8c8",
     },
     fonts: { display: "Antonio", body: "Inter" },

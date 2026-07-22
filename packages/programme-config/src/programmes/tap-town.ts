@@ -22,7 +22,7 @@ export const tapTown: ProgrammeConfigInput = {
   },
   theme: {
     colors: {
-      primary: "#e8541e", primaryContrast: "#ffffff",
+      primary: "#a83208", primaryContrast: "#ffffff",
       surface: "#fff8f2", surfaceText: "#26150c", accent: "#146e5a",
     },
     fonts: { display: "Bricolage Grotesque", body: "Inter" },
