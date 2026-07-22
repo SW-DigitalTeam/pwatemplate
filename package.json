@@ -10,6 +10,8 @@
     "lint": "npm run lint -w apps/web",
     "test": "npm run test -w packages/programme-config",
     "test:db": "bash scripts/test-db.sh",
+    "test:e2e": "npm run test:e2e -w apps/web",
+    "test:a11y": "npm run test:a11y -w apps/web",
     "setup:local": "bash scripts/setup-local.sh"
   }
 }
